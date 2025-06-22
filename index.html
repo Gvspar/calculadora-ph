@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Calculadora Ácido-Base</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #00000060;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .instrucciones {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #cccccc;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            font-size: 16px;
+            margin-bottom: 10px;
+            background-color: #2c2c2c;
+            color: #fff;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            background-color: #00aaff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #008ecc;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1a1a1a;
+            border-left: 4px solid #00aaff;
+            border-radius: 6px;
+        }
+
+        .ph-bar {
+            margin-top: 20px;
+        }
+
+        .scale {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .bar {
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(to right, red, yellow, limegreen, cyan, blue);
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .marker {
+            position: absolute;
+            top: -5px;
+            width: 2px;
+            height: 30px;
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Calculadora Ácido-Base</h1>
+        <div class="instrucciones">
+            Ingresa el tipo de solución, su concentración, "× 10<sup>^</sup>" ya están incluidos en el cálculo, y si es
+            un ácido o base débil, también su constante de equilibrio.
+        </div>
+
+        <label for="tipo">Tipo de solución:</label>
+        <select id="tipo" onchange="mostrarKa()">
+            <option value="acidoF">Ácido fuerte (H⁺)</option>
+            <option value="baseF">Base fuerte (OH⁻)</option>
+            <option value="acidoD">Ácido débil (Ka)</option>
+            <option value="baseD">Base débil (Kb)</option>
+        </select>
+
+        <label>Concentración:</label>
+        <div style="display: flex; gap: 10px;">
+            <input type="number" id="base" step="any" placeholder="Base">
+            <input type="number" id="exponente" step="1" placeholder="Exponente">
+        </div>
+
+        <div id="kaInput">
+            <label>Ka o Kb:</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="kaBase" step="any" placeholder="Base">
+                <input type="number" id="kaExp" step="1" placeholder="Exponente">
+            </div>
+        </div>
+
+        <button onclick="calcularTodo()">Calcular</button>
+        <div id="resultado"></div>
+        <div class="ph-bar">
+            <div class="bar" id="phBar">
+                <div id="phMarker" class="marker"></div>
+            </div>
+            <div class="scale"><span>0</span><span>7</span><span>14</span></div>
+        </div>
+    </div>
+
+    <script>
+        function mostrarKa() {
+            const tipo = document.getElementById("tipo").value;
+            const kaInput = document.getElementById("kaInput");
+            kaInput.style.display = (tipo === "acidoD" || tipo === "baseD") ? "block" : "none";
+        }
+
+        function formatExponential(value) {
+            if (value === 0) return "0";
+            const exp = value.toExponential().split("e");
+            const base = parseFloat(exp[0]).toFixed(2);
+            const exponent = parseInt(exp[1]);
+            return `${base} × 10<sup>${exponent}</sup>`;
+        }
+
+        function calcularTodo() {
+            const tipo = document.getElementById("tipo").value;
+            const baseNum = parseFloat(document.getElementById("base").value);
+            const exponente = parseInt(document.getElementById("exponente").value);
+            const kaBase = parseFloat(document.getElementById("kaBase").value);
+            const kaExp = parseInt(document.getElementById("kaExp").value);
+
+            const resultado = document.getElementById("resultado");
+            const Kw = 1e-14;
+
+            if (isNaN(baseNum) || isNaN(exponente)) {
+                resultado.innerHTML = "⚠️ Ingresa valores válidos para la concentración.";
+                return;
+            }
+
+            const conc = baseNum * Math.pow(10, exponente);
+            if (conc <= 0) {
+                resultado.innerHTML = "⚠️ La concentración debe ser mayor que cero.";
+                return;
+            }
+
+            let KaKb = null;
+            if (tipo === "acidoD" || tipo === "baseD") {
+                if (isNaN(kaBase) || isNaN(kaExp)) {
+                    resultado.innerHTML = "⚠️ Ingresa valores válidos para Ka o Kb.";
+                    return;
+                }
+                KaKb = kaBase * Math.pow(10, kaExp);
+                if (KaKb <= 0) {
+                    resultado.innerHTML = "⚠️ Ka o Kb deben ser mayores que cero.";
+                    return;
+                }
+            }
+
+            let H = 0, OH = 0, pH = 0;
+
+            if (tipo === "acidoF") {
+                H = conc;
+                pH = -Math.log10(H);
+                OH = Kw / H;
+            } else if (tipo === "baseF") {
+                OH = conc;
+                const pOH = -Math.log10(OH);
+                pH = 14 - pOH;
+                H = Kw / OH;
+            } else if (tipo === "acidoD") {
+                H = Math.sqrt(KaKb * conc);
+                pH = -Math.log10(H);
+                OH = Kw / H;
+            } else if (tipo === "baseD") {
+                OH = Math.sqrt(KaKb * conc);
+                const pOH = -Math.log10(OH);
+                pH = 14 - pOH;
+                H = Kw / OH;
+            }
+
+            pH = Math.min(Math.max(pH, 0), 14);
+            const naturaleza = pH < 7 ? "Ácida" : pH > 7 ? "Básica" : "Neutra";
+            const comparacion = Math.abs(H - OH) < 1e-14 ? "[H⁺] = [OH⁻]" : (H > OH ? "[H⁺] > [OH⁻]" : "[H⁺] < [OH⁻]");
+
+            resultado.innerHTML = `
+        <p><strong>pH:</strong> ${pH.toFixed(2)}</p>
+        <p><strong>[H⁺]:</strong> ${formatExponential(H)} mol/L</p>
+        <p><strong>[OH⁻]:</strong> ${formatExponential(OH)} mol/L</p>
+        <p><strong>Escala:</strong> ${naturaleza} (${comparacion})</p>
+      `;
+
+            const marker = document.getElementById("phMarker");
+            marker.style.left = `${(pH / 14) * 100}%`;
+        }
+
+        mostrarKa(); // inicializa estado al cargar
+    </script>
+</body>
+
+</html>
